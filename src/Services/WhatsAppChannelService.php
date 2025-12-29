@@ -13,8 +13,17 @@ class WhatsAppChannelService
 
     public function __construct()
     {
+        // API Version anpassbar machen (Standard: v21.0 wie im bestehenden Code)
+        $apiVersion = config('channel-whatsapp.api_version', 'v21.0');
+        $apiUrl = config('channel-whatsapp.api_url');
+        
+        // Wenn api_url nicht gesetzt ist, aus api_version bauen
+        if (!$apiUrl) {
+            $apiUrl = "https://graph.facebook.com/{$apiVersion}";
+        }
+        
         $this->client = new Client([
-            'base_uri' => config('channel-whatsapp.api_url', 'https://graph.facebook.com/v18.0'),
+            'base_uri' => $apiUrl,
             'timeout'  => 30,
         ]);
     }

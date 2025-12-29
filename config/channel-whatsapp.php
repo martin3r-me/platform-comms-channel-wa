@@ -53,14 +53,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | API-Version (Meta Graph API)
+    |--------------------------------------------------------------------------
+    |
+    | API-Version für die WhatsApp Business Cloud API.
+    | Standard ist v21.0 (wie im bestehenden Code).
+    |
+    */
+    'api_version' => env('WHATSAPP_API_VERSION', 'v21.0'),
+
+    /*
+    |--------------------------------------------------------------------------
     | API-Endpunkt (Meta Graph API)
     |--------------------------------------------------------------------------
     |
     | Basis-URL für die WhatsApp Business Cloud API.
-    | Standard ist die Graph API v18.0.
+    | Wird automatisch mit api_version zusammengesetzt, kann aber auch
+    | komplett überschrieben werden.
     |
     */
-    'api_url' => env('WHATSAPP_API_URL', 'https://graph.facebook.com/v18.0'),
+    'api_url' => env('WHATSAPP_API_URL', null), // null = wird automatisch aus api_version gebaut
 
     /*
     |--------------------------------------------------------------------------

@@ -6,21 +6,17 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use GuzzleHttp\Client;
 use Platform\Comms\ChannelWhatsApp\Models\CommsChannelWhatsAppAccount;
 use Platform\Comms\Registry\ChannelProviderRegistry;
+use Platform\MetaOAuth\Services\MetaOAuthService;
 
 class MetaOAuthController extends Controller
 {
-    protected Client $client;
+    protected MetaOAuthService $metaOAuthService;
 
-    public function __construct()
+    public function __construct(MetaOAuthService $metaOAuthService)
     {
-        $this->client = new Client([
-            'base_uri' => config('channel-whatsapp.api_url', 'https://graph.facebook.com/v18.0'),
-            'timeout'  => 30,
-        ]);
+        $this->metaOAuthService = $metaOAuthService;
     }
 
     /**
@@ -28,30 +24,15 @@ class MetaOAuthController extends Controller
      */
     public function redirect(Request $request)
     {
-        $appId = config('channel-whatsapp.app_id');
-        $redirectUri = route('whatsapp.oauth.callback');
-        $state = Str::random(32);
-        
-        // State in Session speichern für Verifizierung
-        session(['whatsapp_oauth_state' => $state]);
-
         $scopes = [
             'business_management',
             'whatsapp_business_management',
             'whatsapp_business_messaging',
         ];
 
-        $params = http_build_query([
-            'client_id'     => $appId,
-            'redirect_uri'  => $redirectUri,
-            'state'         => $state,
-            'scope'         => implode(',', $scopes),
-            'response_type' => 'code',
-        ]);
+        $redirectUrl = $this->metaOAuthService->getRedirectUrl($scopes);
 
-        $authUrl = "https://www.facebook.com/v18.0/dialog/oauth?{$params}";
-
-        return redirect($authUrl);
+        return redirect($redirectUrl);
     }
 
     /**
@@ -60,16 +41,12 @@ class MetaOAuthController extends Controller
     public function callback(Request $request)
     {
         // State verifizieren
-        $sessionState = session('whatsapp_oauth_state');
         $requestState = $request->query('state');
-
-        if (!$sessionState || $sessionState !== $requestState) {
+        if ($requestState && !$this->metaOAuthService->verifyState($requestState)) {
             Log::error('WhatsApp OAuth state mismatch');
             return redirect()->route('whatsapp.oauth.error')
                 ->with('error', 'Ungültiger OAuth-State. Bitte versuche es erneut.');
         }
-
-        session()->forget('whatsapp_oauth_state');
 
         $code = $request->query('code');
         if (!$code) {
@@ -80,8 +57,10 @@ class MetaOAuthController extends Controller
 
         // Access Token holen
         try {
-            $accessToken = $this->exchangeCodeForToken($code);
-            $businessAccounts = $this->getBusinessAccounts($accessToken);
+            $tokenData = $this->metaOAuthService->exchangeCodeForToken($code);
+            $accessToken = $tokenData['access_token'];
+
+            $businessAccounts = $this->metaOAuthService->getBusinessAccounts($accessToken);
             $phoneNumbers = $this->getPhoneNumbers($accessToken, $businessAccounts);
 
             // Phone Numbers in Session speichern für Auswahl
@@ -186,49 +165,6 @@ class MetaOAuthController extends Controller
     }
 
     /**
-     * Tauscht den OAuth-Code gegen ein Access Token.
-     */
-    protected function exchangeCodeForToken(string $code): string
-    {
-        $appId = config('channel-whatsapp.app_id');
-        $appSecret = config('channel-whatsapp.app_secret');
-        $redirectUri = route('whatsapp.oauth.callback');
-
-        $response = $this->client->get('/oauth/access_token', [
-            'query' => [
-                'client_id'     => $appId,
-                'client_secret' => $appSecret,
-                'redirect_uri'  => $redirectUri,
-                'code'          => $code,
-            ],
-        ]);
-
-        $data = json_decode($response->getBody()->getContents(), true);
-
-        if (!isset($data['access_token'])) {
-            throw new \Exception('Kein Access Token erhalten: ' . json_encode($data));
-        }
-
-        return $data['access_token'];
-    }
-
-    /**
-     * Holt alle Business Accounts des Nutzers.
-     */
-    protected function getBusinessAccounts(string $accessToken): array
-    {
-        $response = $this->client->get('/me/businesses', [
-            'query' => [
-                'access_token' => $accessToken,
-            ],
-        ]);
-
-        $data = json_decode($response->getBody()->getContents(), true);
-
-        return $data['data'] ?? [];
-    }
-
-    /**
      * Holt alle Phone Numbers für die Business Accounts.
      */
     protected function getPhoneNumbers(string $accessToken, array $businessAccounts): array
@@ -245,15 +181,9 @@ class MetaOAuthController extends Controller
             session(['whatsapp_business_id' => $businessId]);
 
             try {
-                $response = $this->client->get("/{$businessId}/phone_numbers", [
-                    'query' => [
-                        'access_token' => $accessToken,
-                    ],
-                ]);
+                $phoneData = $this->metaOAuthService->getWhatsAppPhoneNumbers($accessToken, $businessId);
 
-                $data = json_decode($response->getBody()->getContents(), true);
-
-                foreach ($data['data'] ?? [] as $phone) {
+                foreach ($phoneData as $phone) {
                     $phoneNumbers[] = [
                         'id'                  => $phone['id'] ?? null,
                         'phone_number'        => $phone['phone_number'] ?? null,
