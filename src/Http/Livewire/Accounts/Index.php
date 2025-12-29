@@ -234,9 +234,9 @@ class Index extends Component
     /**
      * Leitet zum Meta OAuth-Flow weiter.
      */
-    public function connectMeta(): void
+    public function connectMeta()
     {
-        return redirect()->route('whatsapp.oauth.redirect');
+        return $this->redirect(route('whatsapp.oauth.redirect'));
     }
 
     public function render()
