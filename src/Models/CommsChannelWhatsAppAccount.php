@@ -21,6 +21,13 @@ class CommsChannelWhatsAppAccount extends Model
 {
     use SoftDeletes;
 
+    /**
+     * Der Name der Datenbanktabelle.
+     * Laravel würde sonst "comms_channel_whats_app_accounts" generieren,
+     * aber unsere Migration erstellt "comms_channel_whatsapp_accounts".
+     */
+    protected $table = 'comms_channel_whatsapp_accounts';
+
     protected $fillable = [
         'phone_number',
         'phone_number_id',
