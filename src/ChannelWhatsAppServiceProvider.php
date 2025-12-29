@@ -45,10 +45,10 @@ class ChannelWhatsAppServiceProvider extends ServiceProvider
         ], 'channel-whatsapp-views');
 
         // Routen (für Webhooks)
-        $this->loadRoutesFrom(__DIR__ . '/routes/webhook.php');
+        $this->loadRoutesFrom(__DIR__ . '/../routes/webhook.php');
 
         // Routen (für OAuth)
-        $this->loadRoutesFrom(__DIR__ . '/routes/oauth.php');
+        $this->loadRoutesFrom(__DIR__ . '/../routes/oauth.php');
     }
 
     public function register(): void
