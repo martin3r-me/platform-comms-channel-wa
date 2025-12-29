@@ -44,12 +44,14 @@ return [
     | Meta App ID und Secret (für OAuth)
     |--------------------------------------------------------------------------
     |
-    | Diese Werte werden für den OAuth-Flow benötigt, um sich bei Meta
-    | anzumelden und verfügbare Phone Numbers abzurufen.
+    | HINWEIS: Diese Werte werden jetzt aus dem Meta-OAuth-Package geholt.
+    | Bitte verwende META_APP_ID und META_APP_SECRET in deiner .env.
+    |
+    | Diese Werte hier sind deprecated und werden nur als Fallback verwendet.
     |
     */
-    'app_id'     => env('WHATSAPP_APP_ID'),
-    'app_secret' => env('WHATSAPP_APP_SECRET'),
+    'app_id'     => env('WHATSAPP_APP_ID', env('META_APP_ID')),
+    'app_secret' => env('WHATSAPP_APP_SECRET', env('META_APP_SECRET')),
 
     /*
     |--------------------------------------------------------------------------

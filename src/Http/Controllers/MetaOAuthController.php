@@ -30,7 +30,10 @@ class MetaOAuthController extends Controller
             'whatsapp_business_messaging',
         ];
 
-        $redirectUrl = $this->metaOAuthService->getRedirectUrl($scopes);
+        // WhatsApp-spezifische Callback-URI verwenden
+        $callbackUri = route('whatsapp.oauth.callback');
+
+        $redirectUrl = $this->metaOAuthService->getRedirectUrl($scopes, null, $callbackUri);
 
         return redirect($redirectUrl);
     }
