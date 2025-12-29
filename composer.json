@@ -1,0 +1,22 @@
+{
+  "name": "martin3r/platform-comms-channel-whatsapp",
+  "type": "library",
+  "require": {
+    "guzzlehttp/guzzle": "^7.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Platform\\Comms\\ChannelWhatsApp\\": "src/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Platform\\Comms\\ChannelWhatsApp\\ChannelWhatsAppServiceProvider"
+      ]
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
+}
+
