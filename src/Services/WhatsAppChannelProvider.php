@@ -78,7 +78,7 @@ class WhatsAppChannelProvider implements ChannelProviderInterface
 
         $account = CommsChannelWhatsAppAccount::find($id);
         if ($account) {
-            $account->delete();
+            $account->forceDelete();
         }
     }
 }
