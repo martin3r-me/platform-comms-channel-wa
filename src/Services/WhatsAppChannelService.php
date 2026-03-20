@@ -106,6 +106,80 @@ class WhatsAppChannelService
     }
 
     /**
+     * Sendet eine Template-Nachricht über die WhatsApp Business Cloud API.
+     *
+     * @param CommsChannelWhatsAppAccount $account
+     * @param string $to Telefonnummer im internationalen Format
+     * @param string $templateName Name des genehmigten Templates
+     * @param string $languageCode Sprachcode (z.B. 'de', 'en_US')
+     * @param array $components Template-Komponenten (Header, Body, Button-Parameter)
+     * @return array API-Response
+     * @throws \Exception
+     */
+    public function sendTemplate(
+        CommsChannelWhatsAppAccount $account,
+        string $to,
+        string $templateName,
+        string $languageCode = 'de',
+        array $components = [],
+    ): array {
+        if (!$account->phone_number_id) {
+            throw new \InvalidArgumentException('Phone Number ID ist nicht konfiguriert.');
+        }
+
+        $apiToken = $account->api_token ?? config('channel-whatsapp.api_token');
+
+        if (!$apiToken) {
+            throw new \InvalidArgumentException('API Token ist nicht konfiguriert.');
+        }
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'to'                => $this->normalizePhoneNumber($to),
+            'type'              => 'template',
+            'template'          => [
+                'name'     => $templateName,
+                'language' => ['code' => $languageCode],
+            ],
+        ];
+
+        if (!empty($components)) {
+            $payload['template']['components'] = $components;
+        }
+
+        try {
+            $response = $this->client->post("{$account->phone_number_id}/messages", [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $apiToken,
+                    'Content-Type'  => 'application/json',
+                ],
+                'json' => $payload,
+            ]);
+
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            Log::info('WhatsApp template sent', [
+                'account_id'    => $account->id,
+                'to'            => $to,
+                'template_name' => $templateName,
+                'language'      => $languageCode,
+                'message_id'    => $result['messages'][0]['id'] ?? null,
+            ]);
+
+            return $result;
+        } catch (GuzzleException $e) {
+            Log::error('WhatsApp template send failed', [
+                'account_id'    => $account->id,
+                'to'            => $to,
+                'template_name' => $templateName,
+                'error'         => $e->getMessage(),
+            ]);
+
+            throw new \Exception('Fehler beim Senden des WhatsApp-Templates: ' . $e->getMessage(), 0, $e);
+        }
+    }
+
+    /**
      * Normalisiert eine Telefonnummer ins internationale Format.
      * Entfernt Leerzeichen, Bindestriche, Klammern und führende Nullen.
      *
